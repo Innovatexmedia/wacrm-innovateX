@@ -1920,6 +1920,18 @@
     "sending": "Enviando...",
     "sendLink": "Enviar enlace de restablecimiento"
   },
+  "ResetPasswordPage": {
+    "title": "Establece una nueva contraseña",
+    "desc": "Elige una nueva contraseña para tu cuenta.",
+    "passwordLabel": "Nueva contraseña",
+    "passwordPlaceholder": "Ingresa tu nueva contraseña",
+    "confirmPasswordLabel": "Confirmar contraseña",
+    "confirmPasswordPlaceholder": "Vuelve a ingresar tu nueva contraseña",
+    "passwordMismatch": "Las contraseñas no coinciden.",
+    "passwordTooShort": "La contraseña debe tener al menos 8 caracteres.",
+    "updating": "Actualizando...",
+    "updatePassword": "Actualizar contraseña"
+  },
   "JoinPage": {
     "fail": {
       "notFoundTitle": "Invitación no encontrada",

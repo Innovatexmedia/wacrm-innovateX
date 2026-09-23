@@ -1932,6 +1932,18 @@
     "sending": "Sending...",
     "sendLink": "Send reset link"
   },
+  "ResetPasswordPage": {
+    "title": "Set a new password",
+    "desc": "Choose a new password for your account.",
+    "passwordLabel": "New password",
+    "passwordPlaceholder": "Enter your new password",
+    "confirmPasswordLabel": "Confirm password",
+    "confirmPasswordPlaceholder": "Re-enter your new password",
+    "passwordMismatch": "Passwords don't match.",
+    "passwordTooShort": "Password must be at least 8 characters.",
+    "updating": "Updating...",
+    "updatePassword": "Update password"
+  },
   "JoinPage": {
     "fail": {
       "notFoundTitle": "Invite not found",

@@ -1932,6 +1932,18 @@
     "sending": "전송 중...",
     "sendLink": "재설정 링크 보내기"
   },
+  "ResetPasswordPage": {
+    "title": "새 비밀번호 설정",
+    "desc": "계정의 새 비밀번호를 선택하세요.",
+    "passwordLabel": "새 비밀번호",
+    "passwordPlaceholder": "새 비밀번호를 입력하세요",
+    "confirmPasswordLabel": "비밀번호 확인",
+    "confirmPasswordPlaceholder": "새 비밀번호를 다시 입력하세요",
+    "passwordMismatch": "비밀번호가 일치하지 않습니다.",
+    "passwordTooShort": "비밀번호는 8자 이상이어야 합니다.",
+    "updating": "업데이트 중...",
+    "updatePassword": "비밀번호 업데이트"
+  },
   "JoinPage": {
     "fail": {
       "notFoundTitle": "초대를 찾을 수 없습니다",

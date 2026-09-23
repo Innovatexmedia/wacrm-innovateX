@@ -1920,6 +1920,18 @@
     "sending": "Enviando...",
     "sendLink": "Enviar link de redefinição"
   },
+  "ResetPasswordPage": {
+    "title": "Defina uma nova senha",
+    "desc": "Escolha uma nova senha para sua conta.",
+    "passwordLabel": "Nova senha",
+    "passwordPlaceholder": "Digite sua nova senha",
+    "confirmPasswordLabel": "Confirmar senha",
+    "confirmPasswordPlaceholder": "Digite novamente sua nova senha",
+    "passwordMismatch": "As senhas não coincidem.",
+    "passwordTooShort": "A senha deve ter pelo menos 8 caracteres.",
+    "updating": "Atualizando...",
+    "updatePassword": "Atualizar senha"
+  },
   "JoinPage": {
     "fail": {
       "notFoundTitle": "Convite não encontrado",

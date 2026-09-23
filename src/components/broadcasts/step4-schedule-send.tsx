@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client';
 import { MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { ArrowLeft, Send, Loader2, Users, Save } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Users, Save, CalendarClock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 interface AudienceConfig {
@@ -33,6 +35,11 @@ interface Step4Props {
   onBack: () => void;
   isProcessing: boolean;
   progress: number;
+  /** ISO datetime string (local, no timezone conversion needed — the
+   *  <input type="datetime-local"> value is used as-is) when the user
+   *  has chosen "Schedule for Later"; null/undefined means "Send Now". */
+  scheduledAt: string | null;
+  onScheduledAtChange: (value: string | null) => void;
 }
 
 export function Step4ScheduleSend({
@@ -45,11 +52,23 @@ export function Step4ScheduleSend({
   onBack,
   isProcessing,
   progress,
+  scheduledAt,
+  onScheduledAtChange,
 }: Step4Props) {
   const t = useTranslations('Broadcasts.wizard');
   const [showConfirm, setShowConfirm] = useState(false);
   const [estimatedReach, setEstimatedReach] = useState<number>(0);
   const [loadingReach, setLoadingReach] = useState(true);
+
+  const isScheduleMode = scheduledAt !== null;
+  // The browser's own "now" as a datetime-local string, for the
+  // input's min= attribute — stops picking a past time at the source
+  // rather than only catching it after the fact.
+  const nowLocalValue = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+  const isPastSchedule =
+    isScheduleMode && scheduledAt !== null && new Date(scheduledAt).getTime() <= Date.now();
 
   useEffect(() => {
     async function calculateReach() {
@@ -144,6 +163,49 @@ export function Step4ScheduleSend({
         </div>
       </div>
 
+      {/* Send timing */}
+      <div className="rounded-xl border border-border bg-card/50 p-4 space-y-3">
+        <p className="text-sm font-medium text-foreground">{t('scheduleSend.sendTiming')}</p>
+        <RadioGroup
+          value={isScheduleMode ? 'scheduled' : 'now'}
+          onValueChange={(v) => onScheduledAtChange(v === 'scheduled' ? nowLocalValue : null)}
+          className="flex flex-col gap-2 sm:flex-row sm:gap-4"
+        >
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="now" id="send-timing-now" />
+            <Label htmlFor="send-timing-now" className="text-sm font-normal text-foreground">
+              {t('scheduleSend.sendTimingNow')}
+            </Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="scheduled" id="send-timing-scheduled" />
+            <Label htmlFor="send-timing-scheduled" className="text-sm font-normal text-foreground">
+              {t('scheduleSend.sendTimingScheduled')}
+            </Label>
+          </div>
+        </RadioGroup>
+
+        {isScheduleMode && (
+          <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-end sm:gap-3">
+            <div className="flex-1">
+              <Label className="mb-1.5 block text-xs text-muted-foreground">
+                {t('scheduleSend.scheduleDateLabel')} / {t('scheduleSend.scheduleTimeLabel')}
+              </Label>
+              <Input
+                type="datetime-local"
+                value={scheduledAt ?? nowLocalValue}
+                min={nowLocalValue}
+                onChange={(e) => onScheduledAtChange(e.target.value)}
+                className="border-border bg-muted text-foreground"
+              />
+            </div>
+          </div>
+        )}
+        {isPastSchedule && (
+          <p className="text-xs text-red-400">{t('scheduleSend.schedulePastError')}</p>
+        )}
+      </div>
+
       {/* Processing overlay */}
       {isProcessing && (
         <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
@@ -191,25 +253,47 @@ export function Step4ScheduleSend({
           <DialogTrigger
             render={
               <Button
-                disabled={!name.trim() || isProcessing}
+                disabled={!name.trim() || isProcessing || isPastSchedule}
                 className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               />
             }
           >
-            <Send className="h-4 w-4" />
-            {t('scheduleSend.sendNow')}
+            {isScheduleMode ? (
+              <CalendarClock className="h-4 w-4" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            {isScheduleMode ? t('scheduleSend.scheduleCampaign') : t('scheduleSend.sendNow')}
           </DialogTrigger>
           <DialogContent className="border-border bg-popover sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="text-popover-foreground">{t('scheduleSend.confirmTitle')}</DialogTitle>
+              <DialogTitle className="text-popover-foreground">
+                {isScheduleMode
+                  ? t('scheduleSend.confirmScheduleTitle')
+                  : t('scheduleSend.confirmTitle')}
+              </DialogTitle>
               <DialogDescription className="text-muted-foreground">
-                {t.rich('scheduleSend.confirmDesc', {
-                  count: estimatedReach,
-                  template: template.name,
-                  b: (chunks) => (
-                    <span className="font-medium text-popover-foreground">{chunks}</span>
-                  ),
-                })}
+                {isScheduleMode
+                  ? t.rich('scheduleSend.confirmScheduleDesc', {
+                      count: estimatedReach,
+                      template: template.name,
+                      when: scheduledAt
+                        ? new Date(scheduledAt).toLocaleString(undefined, {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })
+                        : '',
+                      b: (chunks) => (
+                        <span className="font-medium text-popover-foreground">{chunks}</span>
+                      ),
+                    })
+                  : t.rich('scheduleSend.confirmDesc', {
+                      count: estimatedReach,
+                      template: template.name,
+                      b: (chunks) => (
+                        <span className="font-medium text-popover-foreground">{chunks}</span>
+                      ),
+                    })}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
@@ -227,8 +311,12 @@ export function Step4ScheduleSend({
                 }}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                <Send className="h-4 w-4" />
-                {t('scheduleSend.sendNow')}
+                {isScheduleMode ? (
+                  <CalendarClock className="h-4 w-4" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {isScheduleMode ? t('scheduleSend.scheduleCampaign') : t('scheduleSend.sendNow')}
               </Button>
             </DialogFooter>
           </DialogContent>

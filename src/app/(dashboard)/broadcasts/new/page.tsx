@@ -48,6 +48,7 @@ export default function NewBroadcastPage() {
   >({});
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
   const [name, setName] = useState('');
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
 
   async function handleSend() {
     if (!template) return;
@@ -66,7 +67,11 @@ export default function NewBroadcastPage() {
         variables,
         headerMediaUrl,
         buttonVariables,
+        scheduledAt,
       });
+      if (scheduledAt) {
+        toast.success('Broadcast scheduled — it will send automatically at the time you chose.');
+      }
       router.push(`/broadcasts/${broadcastId}`);
     } catch (err) {
       // Previously swallowed with console.error — the wizard would
@@ -232,6 +237,8 @@ export default function NewBroadcastPage() {
               onBack={() => setCurrentStep(2)}
               isProcessing={isProcessing}
               progress={progress}
+              scheduledAt={scheduledAt}
+              onScheduledAtChange={setScheduledAt}
             />
           )}
         </div>

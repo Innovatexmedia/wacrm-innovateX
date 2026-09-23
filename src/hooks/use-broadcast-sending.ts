@@ -59,6 +59,13 @@ interface BroadcastPayload {
    * `messageParams.buttonParams` alongside body params.
    */
   buttonVariables?: Record<number, VariableMapping>;
+  /**
+   * When set to a future ISO timestamp, the broadcast is persisted as
+   * `status: 'scheduled'` and NOT sent now — api/broadcasts/scheduled-cron
+   * picks it up and sends it later. Omitted (or a past/invalid date)
+   * means send immediately, the original behavior.
+   */
+  scheduledAt?: string | null;
 }
 
 interface UseBroadcastSendingReturn {
@@ -407,6 +414,38 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         throw new Error('No contacts found for this audience.');
       }
 
+      // Media-header templates (image/video/document) require a media
+      // URL on every send. Collected in the personalize step and applied
+      // to all recipients; falls back to the template's stored URL on the
+      // server when omitted. Computed here (moved up from just before the
+      // send loop) because a scheduled broadcast needs it persisted on
+      // the `broadcasts` row now — the send loop that used to compute
+      // this won't run until the cron picks it up, possibly much later.
+      const headerType = payload.template.header_type;
+      const isMediaHeader =
+        headerType === 'image' ||
+        headerType === 'video' ||
+        headerType === 'document';
+      const headerMediaUrl = payload.headerMediaUrl?.trim();
+
+      // URL-button {{1}} values are per-contact (same field/custom-field
+      // resolution as body variables) — computed per recipient below,
+      // alongside body-params resolution, and persisted onto each
+      // recipient row (button_params) for the same reason as
+      // headerMediaUrl above: a scheduled send needs it later, when
+      // `buttonVariables` (a value only known here, in this call) is
+      // long out of scope.
+      const buttonVariables = payload.buttonVariables ?? {};
+      const hasButtonVariables = Object.keys(buttonVariables).length > 0;
+
+      // A schedule in the past is almost certainly a mistake (a stale
+      // date left in the picker, a timezone slip) — treat it as "send
+      // now" rather than silently scheduling something for a time that
+      // already happened, which the cron would never pick up cleanly.
+      const isScheduling = Boolean(
+        payload.scheduledAt && new Date(payload.scheduledAt).getTime() > Date.now(),
+      );
+
       // ── Step 2: Create broadcast row ──────────────────────────────
       setProgress(10);
       const { data: broadcast, error: broadcastError } = await supabase
@@ -424,7 +463,9 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
             customField: payload.audience.customField,
             excludeTagIds: payload.audience.excludeTagIds,
           },
-          status: 'sending',
+          status: isScheduling ? 'scheduled' : 'sending',
+          scheduled_at: isScheduling ? new Date(payload.scheduledAt!).toISOString() : null,
+          header_media_url: isMediaHeader && headerMediaUrl ? headerMediaUrl : null,
           total_recipients: contacts.length,
           sent_count: 0,
           delivered_count: 0,
@@ -464,11 +505,26 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           ),
         ]),
       );
+      const buttonParamsByContact = new Map(
+        contacts.map((contact) => {
+          if (!hasButtonVariables) return [contact.id, null] as const;
+          const resolved: Record<number, string> = {};
+          for (const [indexStr, mapping] of Object.entries(buttonVariables)) {
+            resolved[Number(indexStr)] = resolveButtonVariable(
+              mapping,
+              contact,
+              customValueIndex.get(contact.id),
+            );
+          }
+          return [contact.id, resolved] as const;
+        }),
+      );
       const recipientRows = contacts.map((contact) => ({
         broadcast_id: broadcast.id,
         contact_id: contact.id,
         status: 'pending' as const,
         template_params: paramsByContact.get(contact.id) ?? [],
+        button_params: buttonParamsByContact.get(contact.id) ?? null,
       }));
 
       for (let i = 0; i < recipientRows.length; i += INSERT_BATCH_SIZE) {
@@ -495,6 +551,15 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         }
       }
 
+      // A scheduled broadcast stops here — everything it needs to send
+      // later (recipients, body params, button params, header URL) is
+      // now persisted. api/broadcasts/scheduled-cron does the rest when
+      // `scheduled_at` arrives; nothing below this point runs for it.
+      if (isScheduling) {
+        setProgress(100);
+        return broadcast.id;
+      }
+
       // ── Step 4: Fetch recipients back (joined contact) ────────────
       setProgress(30);
       const { data: recipients, error: recipientsFetchError } = await supabase
@@ -508,24 +573,6 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       let failedCount = 0;
       const totalRecipients = recipients.length;
-
-      // Media-header templates (image/video/document) require a media
-      // URL on every send. Collected in the personalize step and applied
-      // to all recipients; falls back to the template's stored URL on the
-      // server when omitted.
-      const headerType = payload.template.header_type;
-      const isMediaHeader =
-        headerType === 'image' ||
-        headerType === 'video' ||
-        headerType === 'document';
-      const headerMediaUrl = payload.headerMediaUrl?.trim();
-
-      // URL-button {{1}} values are per-contact (same field/custom-field
-      // resolution as body variables), so — unlike headerMediaUrl —
-      // this can't be hoisted to one shared object; it's computed per
-      // recipient just below, alongside the body-params resolution.
-      const buttonVariables = payload.buttonVariables ?? {};
-      const hasButtonVariables = Object.keys(buttonVariables).length > 0;
 
       for (let i = 0; i < recipients.length; i += SEND_BATCH_SIZE) {
         const batch = recipients.slice(i, i + SEND_BATCH_SIZE);

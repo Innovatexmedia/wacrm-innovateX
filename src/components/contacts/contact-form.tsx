@@ -161,6 +161,7 @@ export function ContactForm({
       if (!accountId) throw new Error('Your profile is not linked to an account.');
 
       let contactId = contact?.id;
+      const isNewContact = !isEdit;
 
       if (isEdit && contactId) {
         const { error } = await supabase
@@ -204,6 +205,18 @@ export function ContactForm({
         for (const tagId of toAdd) {
           await addContactTag(contactId, tagId);
         }
+      }
+
+      // Fired after tags are synced above, so a condition step
+      // checking tag_presence sees tags picked in this same form.
+      // Best-effort — see created-trigger/route.ts for why this is a
+      // separate call rather than folded into the insert above.
+      if (isNewContact && contactId) {
+        fetch(`/api/contacts/${contactId}/created-trigger`, {
+          method: 'POST',
+        }).catch((err) => {
+          console.error('Failed to dispatch new_contact_created automation:', err);
+        });
       }
 
       toast.success(isEdit ? t('toastSuccessEdit') : t('toastSuccessAdd'));

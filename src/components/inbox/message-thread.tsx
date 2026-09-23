@@ -858,6 +858,21 @@ export function MessageThread({
       }
 
       onAssignChange(conversation.id, agentId);
+
+      // Fire the conversation_assigned automation trigger — only for an
+      // actual assignment (agentId set), not for clearing one. Kept as
+      // a separate best-effort call after the write above succeeds, so
+      // a bug here can only mean the trigger doesn't fire, never that
+      // the assignment itself silently fails to save.
+      if (agentId) {
+        fetch(`/api/conversations/${conversation.id}/assigned-trigger`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ agent_id: agentId }),
+        }).catch((err) => {
+          console.error("Failed to dispatch conversation_assigned automation:", err);
+        });
+      }
     },
     [conversation, onAssignChange, t],
   );

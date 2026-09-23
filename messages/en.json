@@ -22,7 +22,8 @@
     "notifications": "Notifications",
     "contacts": "Contacts",
     "pipelines": "Pipelines",
-    "broadcasts": "Broadcasts",
+    "templates": "Templates",
+    "broadcasts": "Campaigns",
     "automations": "Automations",
     "flows": "Flows",
     "aiAgents": "AI Agents",
@@ -47,7 +48,7 @@
     "notifications": "Notifications",
     "contacts": "Contacts",
     "pipelines": "Pipelines",
-    "broadcasts": "Broadcasts",
+    "broadcasts": "Campaigns",
     "automations": "Automations",
     "settings": "Settings",
     "openMenu": "Open menu",
@@ -842,7 +843,18 @@
         "estimatedReach": "Estimated Reach",
         "language": "Language",
         "confirmTitle": "Confirm Broadcast",
-        "confirmDesc": "You are about to send this broadcast to <b>{count, number}</b> {count, plural, =1 {contact} other {contacts}} using the <b>{template}</b> template. This action cannot be undone."
+        "confirmDesc": "You are about to send this broadcast to <b>{count, number}</b> {count, plural, =1 {contact} other {contacts}} using the <b>{template}</b> template. This action cannot be undone.",
+        "sendTiming": "When to send",
+        "sendTimingNow": "Send Now",
+        "sendTimingScheduled": "Schedule for Later",
+        "scheduleDateLabel": "Date",
+        "scheduleTimeLabel": "Time",
+        "schedulePastError": "Pick a date and time in the future.",
+        "scheduleCampaign": "Schedule Campaign",
+        "confirmScheduleTitle": "Confirm Scheduled Broadcast",
+        "confirmScheduleDesc": "This broadcast will be sent to <b>{count, number}</b> {count, plural, =1 {contact} other {contacts}} using the <b>{template}</b> template, automatically, at <b>{when}</b>.",
+        "scheduledToastTitle": "Broadcast scheduled",
+        "scheduledToastDesc": "It will send automatically at the time you chose."
       }
     }
   },

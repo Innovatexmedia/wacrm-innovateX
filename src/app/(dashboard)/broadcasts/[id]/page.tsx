@@ -5,6 +5,16 @@ import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Broadcast, BroadcastRecipient, RecipientStatus } from '@/types';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -34,6 +44,11 @@ import {
   Trash2,
   PlayCircle,
   RotateCcw,
+  CalendarClock,
+  MoreVertical,
+  Pencil,
+  Ban,
+  MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -163,6 +178,12 @@ export default function BroadcastDetailPage() {
   const [resumingScope, setResumingScope] = useState<
     'pending' | 'failed' | null
   >(null);
+  const [showEditSchedule, setShowEditSchedule] = useState(false);
+  const [newScheduledAt, setNewScheduledAt] = useState('');
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [showSendNowConfirm, setShowSendNowConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -275,6 +296,53 @@ export default function BroadcastDetailPage() {
       );
     } finally {
       setResumingScope(null);
+    }
+  }
+
+  async function handleReschedule() {
+    if (!newScheduledAt) return;
+    setSavingSchedule(true);
+    try {
+      const res = await fetch(`/api/broadcasts/${broadcastId}/schedule`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reschedule', scheduled_at: newScheduledAt }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(payload?.error || t('toastRescheduleFailed'));
+        return;
+      }
+      toast.success(t('toastRescheduled'));
+      setShowEditSchedule(false);
+      await fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('toastRescheduleFailed'));
+    } finally {
+      setSavingSchedule(false);
+    }
+  }
+
+  async function handleCancelCampaign() {
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/broadcasts/${broadcastId}/schedule`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(payload?.error || t('toastCancelFailed'));
+        return;
+      }
+      toast.success(t('toastCancelled'));
+      setShowCancelConfirm(false);
+      await fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('toastCancelFailed'));
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -409,9 +477,135 @@ export default function BroadcastDetailPage() {
         )}
       </div>
 
+      {/* Scheduled-campaign card. Purely a status display + 3 actions —
+          none of them touch send/schedule logic directly:
+          - Edit Schedule / Cancel → PATCH scheduled_at or status via
+            api/broadcasts/[id]/schedule (new, narrow route above).
+          - Send Now → reuses handleResume('pending'), the exact same
+            server-side delivery path already used for resuming a
+            stalled campaign. Sending itself is 100% pre-existing code. */}
+      {broadcast.status === 'scheduled' && (
+        <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+                <CalendarClock className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">{t('scheduledCard.title')}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {t.rich('scheduledCard.desc', {
+                    when: broadcast.scheduled_at
+                      ? new Date(broadcast.scheduled_at).toLocaleString(undefined, {
+                          dateStyle: 'long',
+                          timeStyle: 'short',
+                        })
+                      : '—',
+                    b: (chunks) => (
+                      <span className="font-medium text-foreground">{chunks}</span>
+                    ),
+                  })}
+                </p>
+                <p className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground">
+                  <Users className="h-3.5 w-3.5" />
+                  {t('scheduledCard.recipients', { count: broadcast.total_recipients })}
+                  <span aria-hidden>·</span>
+                  {broadcast.template_name}
+                  <span aria-hidden>·</span>
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  WhatsApp
+                </p>
+              </div>
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label={t('scheduledCard.moreActions')}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="border-border bg-popover">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setNewScheduledAt(
+                      broadcast.scheduled_at
+                        ? new Date(
+                            new Date(broadcast.scheduled_at).getTime() -
+                              new Date().getTimezoneOffset() * 60000,
+                          )
+                            .toISOString()
+                            .slice(0, 16)
+                        : '',
+                    );
+                    setShowEditSchedule(true);
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  {t('scheduledCard.editSchedule')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShowSendNowConfirm(true)}>
+                  <Send className="h-3.5 w-3.5" />
+                  {t('scheduledCard.sendNow')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="text-red-400 focus:text-red-300"
+                >
+                  <Ban className="h-3.5 w-3.5" />
+                  {t('scheduledCard.cancelCampaign')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-red-400 focus:text-red-300"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {t('scheduledCard.deleteCampaign')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setNewScheduledAt(
+                  broadcast.scheduled_at
+                    ? new Date(
+                        new Date(broadcast.scheduled_at).getTime() -
+                          new Date().getTimezoneOffset() * 60000,
+                      )
+                        .toISOString()
+                        .slice(0, 16)
+                    : '',
+                );
+                setShowEditSchedule(true);
+              }}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              {t('scheduledCard.editSchedule')}
+            </Button>
+            <Button size="sm" onClick={() => setShowSendNowConfirm(true)}>
+              <Send className="h-3.5 w-3.5" />
+              {t('scheduledCard.sendNow')}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Resume / retry (issue #472). Only rendered when there is
-          actually something outstanding. */}
-      {(pendingCount > 0 || retryableCount > 0) && (
+          actually something outstanding — explicitly excludes
+          'scheduled': a scheduled broadcast's recipients sit 'pending'
+          by design until api/broadcasts/scheduled-cron sends them at
+          scheduled_at, which isn't the "stalled tab" scenario this UI
+          was built for. Without this guard, "Resume sending" appeared
+          (and worked) for a scheduled broadcast well before its time,
+          letting a manual click silently stand in for the cron and
+          masking whether the cron itself is actually firing. */}
+      {broadcast.status !== 'scheduled' && (pendingCount > 0 || retryableCount > 0) && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
           <div className="text-sm">
             <p className="font-medium text-foreground">
@@ -635,6 +829,126 @@ export default function BroadcastDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Schedule */}
+      <Dialog open={showEditSchedule} onOpenChange={setShowEditSchedule}>
+        <DialogContent className="border-border bg-popover sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">
+              {t('scheduledCard.editScheduleTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {t('scheduledCard.editScheduleDesc')}
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <Label className="mb-1.5 block text-xs text-muted-foreground">
+              {t('scheduledCard.newDateTime')}
+            </Label>
+            <Input
+              type="datetime-local"
+              value={newScheduledAt}
+              min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
+                .toISOString()
+                .slice(0, 16)}
+              onChange={(e) => setNewScheduledAt(e.target.value)}
+              className="border-border bg-muted text-foreground"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditSchedule(false)}
+              disabled={savingSchedule}
+              className="border-border text-muted-foreground"
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={handleReschedule}
+              disabled={savingSchedule || !newScheduledAt}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {savingSchedule && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {t('scheduledCard.saveSchedule')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Now confirmation — the actual send reuses
+          handleResume('pending'), the same server-side delivery path
+          "Resume" already used; this dialog is the confirmation step,
+          not a new send mechanism. */}
+      <Dialog open={showSendNowConfirm} onOpenChange={setShowSendNowConfirm}>
+        <DialogContent className="border-border bg-popover sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">
+              {t('scheduledCard.sendNowConfirmTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {t('scheduledCard.sendNowConfirmDesc', { count: broadcast.total_recipients })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowSendNowConfirm(false)}
+              disabled={resumingScope !== null}
+              className="border-border text-muted-foreground"
+            >
+              {t('cancel')}
+            </Button>
+            <Button
+              onClick={() => {
+                setShowSendNowConfirm(false);
+                handleResume('pending');
+              }}
+              disabled={resumingScope !== null}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {resumingScope === 'pending' ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+              {t('scheduledCard.sendNow')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel campaign confirmation */}
+      <Dialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+        <DialogContent className="border-border bg-popover sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-popover-foreground">
+              {t('scheduledCard.cancelConfirmTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {t('scheduledCard.cancelConfirmDesc')}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowCancelConfirm(false)}
+              disabled={cancelling}
+              className="border-border text-muted-foreground"
+            >
+              {t('scheduledCard.keepScheduled')}
+            </Button>
+            <Button
+              onClick={handleCancelCampaign}
+              disabled={cancelling}
+              className="bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              {cancelling && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {t('scheduledCard.cancelCampaign')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

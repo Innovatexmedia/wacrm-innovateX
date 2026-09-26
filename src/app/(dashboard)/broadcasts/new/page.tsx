@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
@@ -23,6 +23,7 @@ const steps = [
 
 export default function NewBroadcastPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const t = useTranslations('Broadcasts.new');
   const { accountId } = useAuth();
   const { createAndSendBroadcast, isProcessing, progress } = useBroadcastSending();
@@ -48,7 +49,17 @@ export default function NewBroadcastPage() {
   >({});
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
   const [name, setName] = useState('');
-  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
+  // Locked in from the Campaigns page's entry modal (?mode=now or
+  // ?mode=schedule) and never re-asked inside the wizard — Step 4 no
+  // longer has a toggle, it renders only this mode's UI. Defaults to
+  // 'now' if the param is missing/invalid (e.g. a direct/bookmarked
+  // URL bypassing the modal), so the wizard always has a definite mode.
+  const mode: 'now' | 'schedule' = searchParams.get('mode') === 'schedule' ? 'schedule' : 'now';
+  const [scheduledAt, setScheduledAt] = useState<string | null>(() =>
+    mode === 'schedule'
+      ? new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+      : null,
+  );
 
   async function handleSend() {
     if (!template) return;
@@ -228,6 +239,7 @@ export default function NewBroadcastPage() {
           )}
           {currentStep === 3 && template && (
             <Step4ScheduleSend
+              mode={mode}
               name={name}
               onNameChange={setName}
               template={template}

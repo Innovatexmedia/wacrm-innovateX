@@ -6,7 +6,6 @@ import { MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +25,11 @@ interface AudienceConfig {
 }
 
 interface Step4Props {
+  /** Locked in from the Campaigns page's entry modal — 'now' or
+   *  'schedule'. This step renders ONLY the UI for that mode; the
+   *  Send Now / Schedule toggle that used to live here is gone, so
+   *  the choice is never asked twice. */
+  mode: 'now' | 'schedule';
   name: string;
   onNameChange: (name: string) => void;
   template: MessageTemplate;
@@ -36,13 +40,14 @@ interface Step4Props {
   isProcessing: boolean;
   progress: number;
   /** ISO datetime string (local, no timezone conversion needed — the
-   *  <input type="datetime-local"> value is used as-is) when the user
-   *  has chosen "Schedule for Later"; null/undefined means "Send Now". */
+   *  <input type="datetime-local"> value is used as-is). Only read
+   *  when mode === 'schedule'. */
   scheduledAt: string | null;
   onScheduledAtChange: (value: string | null) => void;
 }
 
 export function Step4ScheduleSend({
+  mode,
   name,
   onNameChange,
   template,
@@ -60,7 +65,7 @@ export function Step4ScheduleSend({
   const [estimatedReach, setEstimatedReach] = useState<number>(0);
   const [loadingReach, setLoadingReach] = useState(true);
 
-  const isScheduleMode = scheduledAt !== null;
+  const isScheduleMode = mode === 'schedule';
   // The browser's own "now" as a datetime-local string, for the
   // input's min= attribute — stops picking a past time at the source
   // rather than only catching it after the fact.
@@ -114,9 +119,11 @@ export function Step4ScheduleSend({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">{t('scheduleSend.title')}</h2>
+        <h2 className="text-lg font-semibold text-foreground">
+          {isScheduleMode ? t('scheduleSend.titleSchedule') : t('scheduleSend.titleSend')}
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {t('scheduleSend.subtitle')}
+          {isScheduleMode ? t('scheduleSend.subtitleSchedule') : t('scheduleSend.subtitleSend')}
         </p>
       </div>
 
@@ -163,30 +170,17 @@ export function Step4ScheduleSend({
         </div>
       </div>
 
-      {/* Send timing */}
-      <div className="rounded-xl border border-border bg-card/50 p-4 space-y-3">
-        <p className="text-sm font-medium text-foreground">{t('scheduleSend.sendTiming')}</p>
-        <RadioGroup
-          value={isScheduleMode ? 'scheduled' : 'now'}
-          onValueChange={(v) => onScheduledAtChange(v === 'scheduled' ? nowLocalValue : null)}
-          className="flex flex-col gap-2 sm:flex-row sm:gap-4"
-        >
-          <div className="flex items-center gap-2">
-            <RadioGroupItem value="now" id="send-timing-now" />
-            <Label htmlFor="send-timing-now" className="text-sm font-normal text-foreground">
-              {t('scheduleSend.sendTimingNow')}
-            </Label>
+      {/* Schedule section — only rendered in schedule mode. No toggle:
+          the mode was already locked in by the entry modal. */}
+      {isScheduleMode && (
+        <div className="rounded-xl border border-border bg-card/50 p-4 space-y-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">{t('scheduleSend.scheduleSectionTitle')}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t('scheduleSend.scheduleSectionSubtitle')}
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <RadioGroupItem value="scheduled" id="send-timing-scheduled" />
-            <Label htmlFor="send-timing-scheduled" className="text-sm font-normal text-foreground">
-              {t('scheduleSend.sendTimingScheduled')}
-            </Label>
-          </div>
-        </RadioGroup>
-
-        {isScheduleMode && (
-          <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-end sm:gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
             <div className="flex-1">
               <Label className="mb-1.5 block text-xs text-muted-foreground">
                 {t('scheduleSend.scheduleDateLabel')} / {t('scheduleSend.scheduleTimeLabel')}
@@ -200,11 +194,11 @@ export function Step4ScheduleSend({
               />
             </div>
           </div>
-        )}
-        {isPastSchedule && (
-          <p className="text-xs text-red-400">{t('scheduleSend.schedulePastError')}</p>
-        )}
-      </div>
+          {isPastSchedule && (
+            <p className="text-xs text-red-400">{t('scheduleSend.schedulePastError')}</p>
+          )}
+        </div>
+      )}
 
       {/* Processing overlay */}
       {isProcessing && (
@@ -263,7 +257,7 @@ export function Step4ScheduleSend({
             ) : (
               <Send className="h-4 w-4" />
             )}
-            {isScheduleMode ? t('scheduleSend.scheduleCampaign') : t('scheduleSend.sendNow')}
+            {isScheduleMode ? t('scheduleSend.scheduleCampaign') : t('scheduleSend.sendCampaign')}
           </DialogTrigger>
           <DialogContent className="border-border bg-popover sm:max-w-md">
             <DialogHeader>
@@ -316,7 +310,7 @@ export function Step4ScheduleSend({
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                {isScheduleMode ? t('scheduleSend.scheduleCampaign') : t('scheduleSend.sendNow')}
+                {isScheduleMode ? t('scheduleSend.scheduleCampaign') : t('scheduleSend.sendCampaign')}
               </Button>
             </DialogFooter>
           </DialogContent>

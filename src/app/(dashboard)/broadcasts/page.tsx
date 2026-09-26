@@ -18,6 +18,7 @@ import { useCan } from '@/hooks/use-can';
 import { GatedButton } from '@/components/ui/gated-button';
 import { getBroadcastStatus } from '@/lib/broadcast-status';
 import { useTranslations } from 'next-intl';
+import { NewCampaignModal } from '@/components/broadcasts/new-campaign-modal';
 
 /**
  * Poll cadence while any broadcast is sending. Kept modest so we don't
@@ -65,6 +66,7 @@ export default function BroadcastsPage() {
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showNewCampaignModal, setShowNewCampaignModal] = useState(false);
 
   // Used to kick off polling only while something is actively sending.
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -190,7 +192,7 @@ export default function BroadcastsPage() {
         <GatedButton
           canAct={canCreate}
           gateReason="create broadcasts"
-          onClick={() => router.push('/broadcasts/new')}
+          onClick={() => setShowNewCampaignModal(true)}
           className="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" />
@@ -208,7 +210,7 @@ export default function BroadcastsPage() {
           <GatedButton
             canAct={canCreate}
             gateReason="create broadcasts"
-            onClick={() => router.push('/broadcasts/new')}
+            onClick={() => setShowNewCampaignModal(true)}
             className="mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
@@ -286,6 +288,15 @@ export default function BroadcastsPage() {
           </Table>
         </div>
       )}
+
+      <NewCampaignModal
+        open={showNewCampaignModal}
+        onOpenChange={setShowNewCampaignModal}
+        onChoose={(mode) => {
+          setShowNewCampaignModal(false);
+          router.push(`/broadcasts/new?mode=${mode}`);
+        }}
+      />
     </div>
   );
 }

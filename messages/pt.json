@@ -16,6 +16,8 @@
   },
   "Sidebar": {
     "title": "InnovateX Media WhatsApp CRM",
+    "brandName": "InnovateX Media",
+    "brandTagline": "WhatsApp CRM",
     "primaryNav": "Principal",
     "dashboard": "Painel",
     "inbox": "Caixa de entrada",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronRight, FileText, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 import { createClient } from '@/lib/supabase/client';
@@ -153,13 +153,25 @@ export function SettingsOverview({
 
   // Per-tile loading + subtitle. `null` counts render as a graceful
   // fallback so a single failed query never blanks a tile.
+  //
+  // Templates and Team are NOT tiles here — they're root-level
+  // modules now (/templates, /team; see sidebar.tsx), not part of
+  // Settings at all. This Overview used to surface both as shortcut
+  // cards that navigated out to those routes, but a shortcut card is
+  // still Settings surfacing them — removed entirely so Settings has
+  // no rendering, card, or navigation trace of either.
   const tiles: {
-    section: SettingsSection;
+    key: string;
+    icon: typeof FileText;
+    label: string;
     loading: boolean;
     subtitle: ReactNode;
+    onClick: () => void;
   }[] = [
     {
-      section: 'whatsapp',
+      key: 'whatsapp',
+      icon: SECTION_META.whatsapp.icon,
+      label: tSections('whatsapp'),
       loading: whatsappLoading,
       subtitle: !whatsapp?.configured ? (
         t('notSetup')
@@ -172,38 +184,20 @@ export function SettingsOverview({
           <StatusDot tone="muted" /> {t('needsReconnecting')}
         </>
       ),
+      onClick: () => onSelect('whatsapp'),
     },
     {
-      section: 'members',
-      loading: countsLoading,
-      subtitle:
-        counts?.members == null
-          ? t('viewTeamMembers')
-          : `${t('membersCount', { count: counts.members })}${
-              counts.pendingInvites
-                ? ` · ${t('pendingInvites', { count: counts.pendingInvites })}`
-                : ''
-            }`,
-    },
-    {
-      section: 'templates',
-      loading: countsLoading,
-      subtitle:
-        counts?.templates == null
-          ? t('manageTemplates')
-          : `${t('templatesCount', { count: counts.templates })}${
-              counts.templatesPending
-                ? ` · ${t('pendingReview', { count: counts.templatesPending })}`
-                : ''
-            }`,
-    },
-    {
-      section: 'deals',
+      key: 'deals',
+      icon: SECTION_META.deals.icon,
+      label: tSections('deals'),
       loading: false,
       subtitle: `${defaultCurrency} — ${currencyLabel}`,
+      onClick: () => onSelect('deals'),
     },
     {
-      section: 'fields',
+      key: 'fields',
+      icon: SECTION_META.fields.icon,
+      label: tSections('fields'),
       loading: countsLoading,
       subtitle:
         counts?.tags == null && counts?.customFields == null
@@ -211,11 +205,15 @@ export function SettingsOverview({
           : `${t('tagsCount', { count: counts?.tags ?? 0 })} · ${t('fieldsCount', {
               count: counts?.customFields ?? 0,
             })}`,
+      onClick: () => onSelect('fields'),
     },
     {
-      section: 'appearance',
+      key: 'appearance',
+      icon: SECTION_META.appearance.icon,
+      label: tSections('appearance'),
       loading: false,
       subtitle: t('appearance', { mode: cap(mode), theme: themeName }),
+      onClick: () => onSelect('appearance'),
     },
   ];
 
@@ -251,14 +249,12 @@ export function SettingsOverview({
 
       {/* Status tiles */}
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {tiles.map(({ section, loading, subtitle }) => {
-          const meta = SECTION_META[section];
-          const Icon = meta.icon;
+        {tiles.map(({ key, icon: Icon, label, loading, subtitle, onClick }) => {
           return (
             <button
-              key={section}
+              key={key}
               type="button"
-              onClick={() => onSelect(section)}
+              onClick={onClick}
               className={cn(
                 'group flex items-start gap-3.5 rounded-xl border border-border bg-card p-4 text-left transition-colors',
                 'hover:border-primary-soft-2 hover:bg-card-2',
@@ -269,7 +265,7 @@ export function SettingsOverview({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-semibold text-foreground">
-                  {tSections(section)}
+                  {label}
                 </span>
                 <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                   {loading ? (

@@ -19,6 +19,7 @@ import { GatedButton } from '@/components/ui/gated-button';
 import { getBroadcastStatus } from '@/lib/broadcast-status';
 import { useTranslations } from 'next-intl';
 import { NewCampaignModal } from '@/components/broadcasts/new-campaign-modal';
+import { ApiCampaignDialog } from '@/components/broadcasts/api-campaign-dialog';
 
 /**
  * Poll cadence while any broadcast is sending. Kept modest so we don't
@@ -62,11 +63,13 @@ export default function BroadcastsPage() {
   const router = useRouter();
   const t = useTranslations('Broadcasts.page');
   const tStatus = useTranslations('Broadcasts.status');
+  const tApi = useTranslations('Broadcasts.apiCampaign');
   const canCreate = useCan('send-messages');
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewCampaignModal, setShowNewCampaignModal] = useState(false);
+  const [showApiCampaignDialog, setShowApiCampaignDialog] = useState(false);
 
   // Used to kick off polling only while something is actively sending.
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -244,6 +247,11 @@ export default function BroadcastsPage() {
                   >
                     <TableCell className="font-medium text-foreground">
                       {broadcast.name}
+                      {broadcast.kind === 'api' && (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-400">
+                          {tApi('listBadge')}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="hidden text-muted-foreground md:table-cell">
                       {broadcast.template_name}
@@ -294,8 +302,17 @@ export default function BroadcastsPage() {
         onOpenChange={setShowNewCampaignModal}
         onChoose={(mode) => {
           setShowNewCampaignModal(false);
+          if (mode === 'api') {
+            setShowApiCampaignDialog(true);
+            return;
+          }
           router.push(`/broadcasts/new?mode=${mode}`);
         }}
+      />
+
+      <ApiCampaignDialog
+        open={showApiCampaignDialog}
+        onOpenChange={setShowApiCampaignDialog}
       />
     </div>
   );

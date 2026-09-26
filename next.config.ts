@@ -69,6 +69,15 @@ const nextConfig: NextConfig = {
   // Harmless outside Docker: `next start` keeps working as before.
   output: "standalone",
 
+  // The developer docs (/docs) read Markdown from ./docs at request
+  // time. File tracing can't see that, so include the files explicitly —
+  // otherwise the standalone/Docker build ships without them.
+  outputFileTracingIncludes: {
+    "/docs": ["./docs/*.md"],
+    "/docs/api-campaigns": ["./docs/*.md"],
+    "/docs/api-campaigns/\\[id\\]": ["./docs/*.md"],
+  },
+
   /**
    * Cross-origin dev access (Next.js 16).
    *

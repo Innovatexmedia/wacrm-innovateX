@@ -330,6 +330,18 @@ export async function finalizeBroadcastStatus(
   db: SupabaseClient,
   broadcastId: string
 ): Promise<void> {
+  // An API campaign (migration 043) is never "done" — it stays 'active'
+  // and keeps accepting sends, so it must not be flipped to sent/failed.
+  // Awaited directly (an array result) rather than via .maybeSingle(), so
+  // it also works with the plain chained query mocks in the unit tests.
+  // If the `kind` column doesn't exist yet the query just errors and this
+  // is skipped, i.e. behaviour is unchanged for ordinary broadcasts.
+  const { data: parentRows } = await db
+    .from('broadcasts')
+    .select('kind')
+    .eq('id', broadcastId);
+  if (parentRows?.[0]?.kind === 'api') return;
+
   const countWhere = async (status: string): Promise<number> => {
     const { count } = await db
       .from('broadcast_recipients')

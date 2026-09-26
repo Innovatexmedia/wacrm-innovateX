@@ -1,44 +1,25 @@
 import { ImageResponse } from "next/og";
 
-// Replaces the default Next.js favicon with the brand mark — Hostinger
-// violet rounded square + white chat-square glyph — matching the
-// sidebar logo in `src/components/layout/sidebar.tsx`. Next.js renders
-// this at build time and auto-injects <link rel="icon"> into <head>.
+// Browser-tab favicon: the InnovateX "X" mark on a white rounded tile
+// (the tile keeps it readable on both dark and light browser themes).
+// Next.js renders this and auto-injects <link rel="icon"> (see the
+// `icons` entry in src/app/layout.tsx, which points at /icon).
 //
-// This route takes precedence over src/app/favicon.ico, which is the
-// Next.js default and can stay on disk harmlessly (or be removed).
+// The 64x64 PNG below is embedded as base64 because this route runs on
+// the edge runtime and cannot read files from disk.
 
 export const runtime = "edge";
-export const size = { width: 32, height: 32 };
+export const size = { width: 64, height: 64 };
 export const contentType = "image/png";
+
+const MARK_PNG =
+  "data:image/png;base64,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";
 
 export default function Icon() {
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#7c3aed", // primary (Hostinger-aligned purple)
-          borderRadius: 6,
-        }}
-      >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      </div>
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={MARK_PNG} alt="" width={64} height={64} />
     ),
     { ...size },
   );

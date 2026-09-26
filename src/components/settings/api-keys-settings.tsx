@@ -40,6 +40,7 @@ import {
   SCOPE_DESCRIPTIONS,
   type ApiScope,
 } from '@/lib/api-keys/scopes';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { SettingsPanelHead } from './settings-panel-head';
 
@@ -72,6 +73,7 @@ function keyStatus(k: ApiKey): 'active' | 'revoked' | 'expired' {
 export function ApiKeysSettings() {
   const { canEditSettings } = useAuth();
   const t = useTranslations('Settings.apiKeys');
+  const tApi = useTranslations('Broadcasts.apiCampaign');
 
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -145,12 +147,20 @@ export function ApiKeysSettings() {
           })
         }
         action={
-          <RequireRole min="admin">
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="size-4" />
-              {t('newApiKey')}
-            </Button>
-          </RequireRole>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/docs#authentication"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {tApi('authDocs')}
+            </Link>
+            <RequireRole min="admin">
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="size-4" />
+                {t('newApiKey')}
+              </Button>
+            </RequireRole>
+          </div>
         }
       />
 

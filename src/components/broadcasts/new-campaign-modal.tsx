@@ -7,33 +7,30 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { Zap, CalendarClock, ChevronRight } from 'lucide-react';
+import { Megaphone, Code, CalendarClock, RefreshCw, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
 interface NewCampaignModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Which entry the user picked — the builder locks to this mode for
-   *  the rest of the flow (no toggle inside it), but this component
-   *  carries no send/schedule logic of its own; onChoose just tells
-   *  the caller which option was picked so it can navigate into the
-   *  same wizard, already in that mode. */
-  onChoose: (mode: 'now' | 'schedule') => void;
+  /** Which entry the user picked. 'now' and 'schedule' open the existing
+   *  broadcast wizard already in that mode; 'api' opens the API-campaign
+   *  dialog. This component carries no send/schedule logic of its own. */
+  onChoose: (mode: 'now' | 'schedule' | 'api') => void;
 }
 
 /**
- * Pure UI — a campaign-type selection screen shown before entering
- * the existing broadcast wizard (src/app/(dashboard)/broadcasts/new/
- * page.tsx). Wider, SaaS-style version: side-by-side cards, fixed
- * (non-theme-accent) colors so "Send now" never reads as a red/
- * destructive action regardless of the account's chosen accent color.
+ * Campaign-type selection screen. Four cards, each with its own fixed
+ * accent (not the theme accent) so "Broadcast" never reads as a
+ * destructive red action whatever accent color the account chose.
+ * "Recurring" is shown but not yet available.
  */
 export function NewCampaignModal({ open, onOpenChange, onChoose }: NewCampaignModalProps) {
   const t = useTranslations('Broadcasts.newCampaignModal');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-border bg-popover sm:max-w-[740px]">
+      <DialogContent className="border-border bg-popover sm:max-w-[960px]">
         <DialogHeader>
           <DialogTitle className="text-2xl text-popover-foreground">{t('title')}</DialogTitle>
           <DialogDescription className="text-base text-muted-foreground">
@@ -43,22 +40,36 @@ export function NewCampaignModal({ open, onOpenChange, onChoose }: NewCampaignMo
 
         <div className="grid grid-cols-1 gap-4 pt-2 sm:grid-cols-2">
           <OptionCard
-            icon={<Zap className="h-7 w-7" />}
-            iconWrapClassName="bg-emerald-500/10 text-emerald-400"
+            icon={<Megaphone className="h-7 w-7" />}
+            tone="emerald"
             title={t('sendNowTitle')}
             description={t('sendNowDesc')}
             badge={t('sendNowBadge')}
-            badgeClassName="bg-emerald-500/10 text-emerald-400"
             onClick={() => onChoose('now')}
           />
           <OptionCard
+            icon={<Code className="h-7 w-7" />}
+            tone="amber"
+            title={t('apiTitle')}
+            description={t('apiDesc')}
+            badge={t('apiBadge')}
+            onClick={() => onChoose('api')}
+          />
+          <OptionCard
             icon={<CalendarClock className="h-7 w-7" />}
-            iconWrapClassName="bg-blue-500/10 text-blue-400"
+            tone="blue"
             title={t('scheduleTitle')}
             description={t('scheduleDesc')}
             badge={t('scheduleBadge')}
-            badgeClassName="bg-blue-500/10 text-blue-400"
             onClick={() => onChoose('schedule')}
+          />
+          <OptionCard
+            icon={<RefreshCw className="h-7 w-7" />}
+            tone="violet"
+            title={t('recurringTitle')}
+            description={t('recurringDesc')}
+            badge={t('recurringBadge')}
+            comingSoon={t('comingSoon')}
           />
         </div>
       </DialogContent>
@@ -66,45 +77,102 @@ export function NewCampaignModal({ open, onOpenChange, onChoose }: NewCampaignMo
   );
 }
 
+// Full class names (not interpolated) so Tailwind can see them.
+const TONES = {
+  emerald: {
+    card: 'border-emerald-500/40 bg-gradient-to-br from-emerald-500/10 to-transparent hover:border-emerald-400/70 hover:shadow-emerald-500/10',
+    icon: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+    badge: 'bg-emerald-500/10 text-emerald-400',
+    arrow: 'border-emerald-500/40 text-emerald-300',
+  },
+  amber: {
+    card: 'border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-transparent hover:border-amber-400/70 hover:shadow-amber-500/10',
+    icon: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+    badge: 'bg-amber-500/10 text-amber-400',
+    arrow: 'border-amber-500/40 text-amber-300',
+  },
+  blue: {
+    card: 'border-blue-500/40 bg-gradient-to-br from-blue-500/10 to-transparent hover:border-blue-400/70 hover:shadow-blue-500/10',
+    icon: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+    badge: 'bg-blue-500/10 text-blue-400',
+    arrow: 'border-blue-500/40 text-blue-300',
+  },
+  violet: {
+    card: 'border-violet-500/30 bg-gradient-to-br from-violet-500/10 to-transparent',
+    icon: 'border-violet-500/30 bg-violet-500/10 text-violet-400',
+    badge: 'bg-violet-500/10 text-violet-400',
+    arrow: 'border-violet-500/40 text-violet-300',
+  },
+} as const;
+
 function OptionCard({
   icon,
-  iconWrapClassName,
+  tone,
   title,
   description,
   badge,
-  badgeClassName,
   onClick,
+  comingSoon,
 }: {
   icon: React.ReactNode;
-  iconWrapClassName: string;
+  tone: keyof typeof TONES;
   title: string;
   description: string;
   badge: string;
-  badgeClassName: string;
-  onClick: () => void;
+  onClick?: () => void;
+  /** When set, the card is inert and shows this pill (e.g. "Coming soon"). */
+  comingSoon?: string;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex flex-col items-start gap-4 rounded-2xl border border-border bg-card/50 p-6 text-left transition-all hover:border-primary/50 hover:bg-card hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-popover"
-    >
+  const c = TONES[tone];
+  const disabled = !!comingSoon;
+
+  const body = (
+    <>
       <div className="flex w-full items-start justify-between">
-        <div className={`flex h-14 w-14 items-center justify-center rounded-xl ${iconWrapClassName}`}>
+        <div className={`flex h-14 w-14 items-center justify-center rounded-xl border ${c.icon}`}>
           {icon}
         </div>
-        <ChevronRight className="mt-1 h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+        {comingSoon ? (
+          <span className={`rounded-full border px-3 py-1 text-xs font-medium uppercase ${c.arrow}`}>
+            {comingSoon}
+          </span>
+        ) : (
+          <span
+            className={`flex h-10 w-10 items-center justify-center rounded-full border transition-transform group-hover:translate-x-1 ${c.arrow}`}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </span>
+        )}
       </div>
 
       <div>
         <span
-          className={`mb-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClassName}`}
+          className={`mb-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${c.badge}`}
         >
           {badge}
         </span>
         <p className="text-lg font-semibold text-foreground">{title}</p>
         <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{description}</p>
       </div>
+    </>
+  );
+
+  const base = `group flex flex-col items-start gap-4 rounded-2xl border p-6 text-left transition-all ${c.card}`;
+
+  if (disabled) {
+    return (
+      <div aria-disabled="true" className={`${base} cursor-not-allowed opacity-60`}>
+        {body}
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${base} hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-popover`}
+    >
+      {body}
     </button>
   );
 }

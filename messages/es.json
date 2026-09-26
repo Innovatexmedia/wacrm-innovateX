@@ -671,7 +671,8 @@
       "delivered": "Entregado",
       "read": "Leído",
       "replied": "Respondido",
-      "unknown": "Desconocido"
+      "unknown": "Desconocido",
+      "active": "Active"
     },
     "detail": {
       "backToBroadcasts": "Volver a difusiones",
@@ -846,6 +847,52 @@
         "confirmTitle": "Confirmar difusión",
         "confirmDesc": "Estás a punto de enviar esta difusión a <b>{count, number}</b> {count, plural, =1 {contacto} other {contactos}} con la plantilla <b>{template}</b>. Esta acción no se puede deshacer."
       }
+    },
+    "newCampaignModal": {
+      "apiTitle": "API Campaign",
+      "apiDesc": "Trigger WhatsApp campaigns from your website, app or backend using our API.",
+      "apiBadge": "For developers",
+      "subtitle": "Choose the type of campaign you want to create.",
+      "sendNowTitle": "Broadcast Campaign",
+      "sendNowDesc": "Send WhatsApp messages to your contacts or audiences instantly.",
+      "sendNowBadge": "For marketing",
+      "scheduleTitle": "Schedule Campaign",
+      "scheduleDesc": "Choose a date and time and let the campaign start automatically.",
+      "scheduleBadge": "For automation",
+      "recurringTitle": "Recurring Campaign",
+      "recurringDesc": "Set up repeated campaigns to run automatically at regular intervals (daily, weekly, monthly, etc.).",
+      "recurringBadge": "For engagement",
+      "comingSoon": "Coming soon"
+    },
+    "apiCampaign": {
+      "dialogTitle": "New API campaign",
+      "dialogDesc": "Pick a template. You'll get an endpoint that sends it to one contact per API call.",
+      "nameLabel": "Campaign name",
+      "namePlaceholder": "e.g. Order confirmation",
+      "templateLabel": "Template",
+      "templatePlaceholder": "Select an approved template",
+      "noTemplates": "No approved templates yet. Create and get one approved in Templates first.",
+      "loadFailed": "Failed to load templates",
+      "cancel": "Cancel",
+      "create": "Create campaign",
+      "creating": "Creating…",
+      "toastCreated": "API campaign created",
+      "toastFailed": "Failed to create campaign",
+      "toastNotSignedIn": "You are not signed in",
+      "toastNotLinked": "Your account is not linked yet",
+      "listBadge": "API",
+      "panelTitle": "API endpoint",
+      "panelDesc": "Send this campaign's template to one contact per request. Create an API key with the broadcasts:send scope in Settings → API keys.",
+      "endpointLabel": "Endpoint",
+      "exampleLabel": "Example request",
+      "copy": "Copy",
+      "copied": "Copied",
+      "paramsHint": "params fill the template's variables in order (first value goes into the first variable). Leave it out for templates without variables.",
+      "apiKeyHint": "Calls to this campaign need an API key with the broadcasts:send scope, sent in the Authorization header.",
+      "manageKeys": "Manage API keys →",
+      "integration": "Integration →",
+      "viewDocs": "View API docs",
+      "authDocs": "API authentication docs →"
     }
   },
   "Automations": {

@@ -56,6 +56,7 @@ import {
   getRecipientStatus,
 } from '@/lib/broadcast-status';
 import { useTranslations } from 'next-intl';
+import { ApiCampaignPanel } from '@/components/broadcasts/api-campaign-panel';
 
 interface StatCardProps {
   label: string;
@@ -476,6 +477,8 @@ export default function BroadcastDetailPage() {
           </Button>
         )}
       </div>
+
+      {broadcast.kind === 'api' && <ApiCampaignPanel campaignId={broadcast.id} />}
 
       {/* Scheduled-campaign card. Purely a status display + 3 actions —
           none of them touch send/schedule logic directly:
